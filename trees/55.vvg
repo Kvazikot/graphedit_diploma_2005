@@ -1,0 +1,67 @@
+AddNode(72,89,256 уровней,1,1,nil,@GRAY)
+
+AddNode(250,90,256 уровней#,1,1,nil,@GRAY)
+
+AddNode(123,143,ISUB,2,1,nil,@ISUB)
+AddBoolParam(ABS,1)
+
+AddNode(281,151,ERODE,1,1,nil,@ERODE)
+
+AddNode(413,139,DILATE,1,1,nil,@DILATE)
+
+AddNode(335,201,ISUB#,2,1,nil,@ISUB)
+AddBoolParam(ABS,1)
+
+AddNode(298,253,бин. контур.,1,1,nil,@BIN)
+AddIntParam(BIN_Level,67,0.00,255.00)
+AddIntParam(MAX_Level,255,0.00,255.00)
+
+AddNode(191,291,IAND,2,1,nil,@IAND)
+
+AddNode(225,337,—тробирование,2,1,nil,@STROB_PROC)
+AddIntParam(Noise_level,2,0.00,30.00)
+AddIntParam(Steps,3,1.00,10.00)
+AddBoolParam(Show_Gistogram,0)
+AddBoolParam(Conture\Overlay,0)
+
+AddNode(173,7,FILE_IN,0,2,nil,0)
+AddFileParam(FILENAME,cyborg_g.bmp)
+AddIntParam(Frame Buffers,30,0.00,100.00)
+AddIntParam(N Outputs,2,1.00,10.00)
+AddIntParam(Frames Delta,1,0.00,10.00)
+AddFileInManager{
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_001.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_002.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_003.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_004.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_005.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_006.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_008.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_009.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_010.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_011.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_013.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_015.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_016.bmp
+d:\diplom\my_progs\GE\GE_ver1\alladin\ALADDIN_017.bmp
+}
+
+AddNode(62,283,4SS,2,1,nil,_4SS_PROC)
+AddBoolParam(Switch,1)
+AddBoolParam(DrawGrid,0)
+AddBoolParam(DrawVectors,1)
+
+AddConnection(0,2,0,0)
+AddConnection(1,3,0,0)
+AddConnection(3,5,0,0)
+AddConnection(4,5,0,1)
+AddConnection(1,4,0,0)
+AddConnection(6,7,0,1)
+AddConnection(5,6,0,0)
+AddConnection(1,2,0,1)
+AddConnection(7,8,0,0)
+AddConnection(9,0,0,0)
+AddConnection(9,1,1,0)
+AddConnection(9,8,1,1)
+AddConnection(0,10,0,0)
+AddConnection(1,10,0,1)

@@ -1,0 +1,38 @@
+unit PixelQuenue;
+
+interface
+
+type
+ TPixelQuenue = class
+    Data: array of Pointer;
+    p_cur:Pointer;
+    p_0: Pointer;
+    p_lst: Pointer;
+
+    public
+     constructor Create(size:integer);
+     destructor  Destroy;
+     procedure   Push(p:Pointer);
+     function    Pop:Pointer;
+  end;
+
+implementation
+
+   constructor TPixelQuenue.Create(size:integer);
+   begin
+
+   end;
+
+   destructor TPixelQuenue.Destroy;  begin   end;
+
+   procedure TPixelQuenue.Push(p:Pointer);
+   begin
+
+   end;
+
+   function  TPixelQuenue.Pop:Pointer;
+   begin
+
+   end;
+
+end.

@@ -1,0 +1,191 @@
+// Nothing Real Shake v2.43.1118 - Copyright 1998-2001 Nothing Real, LLC
+
+SetTimeRange("1");
+SetFieldRendering(0);
+SetFps(24);
+SetMotionBlur(1, 1, 0);
+SetQuality(1);
+SetProxyScale(1, 1);
+SetProxyFilter("default");
+SetPixelScale(1, 1);
+SetDefaultWidth(720);
+SetDefaultHeight(486);
+SetDefaultBytes(1);
+SetDefaultAspect(1);
+SetDefaultViewerAspect(1);
+SetTimecodeMode("24 FPS");
+
+
+// Input nodes
+
+old_ship0_507___ = FileIn("//Duder/F/old_ship0-507@@@.bmp", "Auto", 
+    0, 0);
+old_ship0_507___2 = FileIn("//Duder/F/old_ship0-507@@@.bmp", 
+    "Auto", 0, 0);
+IRetime(old_ship0_507___2, 12, 13, 521, "Freeze", "Freeze");
+
+// Processing nodes
+
+ColorSpace1 = ColorSpace(old_ship0_507___2, "hls", "rgb", 0.3, 
+    0.7, 0.2);
+DilateErode1 = DilateErode(old_ship0_507___, "rgba", 2, 2, 0, 
+    0, 0);
+DilateErode2 = DilateErode(old_ship0_507___, "rgba", -1.7, -1.9, 
+    0, 0, 0);
+Threshold1 = Threshold(old_ship0_507___, 0.6, 0.6, 0.6, 0, 0.3, 
+    0);
+Threshold2 = Threshold(old_ship0_507___2, 0.6, 0.6, 0.6, 0, 0.3, 
+    0);
+Convolve1 = Convolve(Threshold1, "rgba", "smoothedge", 100, 0);
+Convolve2 = Convolve(Threshold2, "rgba", "smoothedge", 100, 0);
+ISub1 = ISub(DilateErode1, DilateErode2, 1, 100);
+
+
+// User Interface settings
+
+SetKey(
+    "colorPicker.hex", "0",
+    "colorPicker.range", "32",
+    "globals.fileBrowser.favorites", "d:/Post Product/Shake-v.2.43.1118/;$HOME;C:/Documents and Settings/VDBAR/Personal//nreal/;D:/Post Product/Shake-v.2.43.1118/;D:/Post Product/Shake-v.2.43.1118/doc/pix;",
+    "globals.fileBrowserHeight", "540",
+    "globals.fileBrowserLC1", "230",
+    "globals.fileBrowserLC2", "70",
+    "globals.fileBrowserLC3", "110",
+    "globals.fileBrowserLC4", "245",
+    "globals.fileBrowserLC5", "175",
+    "globals.fileBrowserLC6", "65",
+    "globals.fileBrowserLC7", "111",
+    "globals.fileBrowserSC1", "211",
+    "globals.fileBrowserSC2", "211",
+    "globals.fileBrowserSC3", "211",
+    "globals.fileBrowserWidth", "790",
+    "globals.fileBrowserfullPath", "0",
+    "globals.fontBlue", "1",
+    "globals.fontGreen", "1",
+    "globals.fontRed", "1",
+    "globals.noodleBlue", "1",
+    "globals.noodleGreen", "1",
+    "globals.noodleRed", "1",
+    "globals.noodleTension", "0.25",
+    "globals.paintFrameMode", "1",
+    "globals.project", "",
+    "globals.renderModeTog.cycle", "",
+    "globals.viewerAspectRatio", "1",
+    "globals.viewerZoom", "1.0/proxyScale",
+    "globals.virtualSliderMode", "0",
+    "globals.virtualSliderSpeed", "0.25",
+    "mainQuad.bot", "0.6",
+    "mainQuad.left", "0.29",
+    "mainQuad.right", "0.3908859",
+    "mainQuad.top", "0.6",
+    "mainWin.height", "719",
+    "mainWin.tabChild1", "0.Image",
+    "mainWin.tabChild10", "0.REVision",
+    "mainWin.tabChild11", "0.User",
+    "mainWin.tabChild12", "0.Midane",
+    "mainWin.tabChild13", "0.Curve_Editor_2",
+    "mainWin.tabChild14", "0.Node_View_2",
+    "mainWin.tabChild15", "0.Time_View",
+    "mainWin.tabChild16", "1.Parameters1",
+    "mainWin.tabChild17", "1.Parameters2",
+    "mainWin.tabChild18", "1.Globals",
+    "mainWin.tabChild19", "2.Viewers",
+    "mainWin.tabChild2", "0.Color",
+    "mainWin.tabChild20", "3.Node_View",
+    "mainWin.tabChild21", "3.Curve_Editor",
+    "mainWin.tabChild22", "3.Color_Picker",
+    "mainWin.tabChild23", "3.Pixel_Analyzer",
+    "mainWin.tabChild3", "0.Filter",
+    "mainWin.tabChild4", "0.Key",
+    "mainWin.tabChild5", "0.Layer",
+    "mainWin.tabChild6", "0.Transform",
+    "mainWin.tabChild7", "0.Warp",
+    "mainWin.tabChild8", "0.Other",
+    "mainWin.tabChild9", "0.Tinder",
+    "mainWin.width", "1024",
+    "mainWin.xPos", "0",
+    "mainWin.yPos", "30",
+    "nodeView.ColorSpace1.x", "90.78754",
+    "nodeView.ColorSpace1.y", "50.25",
+    "nodeView.Convolve1.x", "-19.26251",
+    "nodeView.Convolve1.y", "173.5124",
+    "nodeView.Convolve2.x", "107.6625",
+    "nodeView.Convolve2.y", "104.7564",
+    "nodeView.DilateErode1.x", "164.4249",
+    "nodeView.DilateErode1.y", "235.3251",
+    "nodeView.DilateErode2.x", "329.1252",
+    "nodeView.DilateErode2.y", "225.975",
+    "nodeView.ISub1.x", "225.8625",
+    "nodeView.ISub1.y", "142.4876",
+    "nodeView.Threshold1.x", "8.037338",
+    "nodeView.Threshold1.y", "248.9497",
+    "nodeView.Threshold2.x", "105.6625",
+    "nodeView.Threshold2.y", "173.7564",
+    "nodeView.old_ship0_507___.x", "18.2",
+    "nodeView.old_ship0_507___.y", "349.3751",
+    "nodeView.old_ship0_507___2.x", "236.5",
+    "nodeView.old_ship0_507___2.y", "335.6374",
+    "nodeView.xPan", "54.66248",
+    "nodeView.yPan", "38.13749",
+    "nodeView.zoom", "0.6611571",
+    "pixelAnalyzer1.aStatToggleState", "0",
+    "pixelAnalyzer1.accumulate", "0",
+    "pixelAnalyzer1.bStatToggleState", "0",
+    "pixelAnalyzer1.bit16ToggleState", "0",
+    "pixelAnalyzer1.bit32ToggleState", "1",
+    "pixelAnalyzer1.bit8ToggleState", "0",
+    "pixelAnalyzer1.gStatToggleState", "0",
+    "pixelAnalyzer1.hStatToggleState", "0",
+    "pixelAnalyzer1.hex", "0",
+    "pixelAnalyzer1.imgToggleState", "0",
+    "pixelAnalyzer1.lStatToggleState", "1",
+    "pixelAnalyzer1.offToggleState", "0",
+    "pixelAnalyzer1.pxlToggleState", "1",
+    "pixelAnalyzer1.rStatToggleState", "0",
+    "pixelAnalyzer1.sStatToggleState", "0",
+    "pixelAnalyzer1.vStatToggleState", "0",
+    "timeBar.current", "395",
+    "timeBar.high", "433",
+    "timeBar.incr", "1",
+    "timeBar.low", "334",
+    "timeView.ctrls.selGroup", "0",
+    "timeView.list.open.old_ship0_507___", "1",
+    "timeView.list.open.old_ship0_507___.cycle", "",
+    "timeView.list.open.old_ship0_507___2", "1",
+    "timeView.list.open.old_ship0_507___2.cycle", "",
+    "timeView.wSpace.constDisp", "0",
+    "timeView.wSpace.dispInOut", "1",
+    "timeView.wSpace.endTime", "100",
+    "timeView.wSpace.startTime", "1",
+    "timeView.wSpace.trim", "0",
+    "updater.mode", "2",
+    "vDesk.0.chanTog.0.cycle", "",
+    "vDesk.0.chanTog.1.cycle", "",
+    "vDesk.0.compareTog.cycle", "",
+    "vDesk.0.dMatrix", "1",
+    "vDesk.0.displayModeA", "0",
+    "vDesk.0.displayModeB", "0",
+    "vDesk.0.g", "1",
+    "vDesk.0.h", "447",
+    "vDesk.0.i", "0",
+    "vDesk.0.ih", "892679679",
+    "vDesk.0.iw", "909456895",
+    "vDesk.0.lutTog.cycle", "",
+    "vDesk.0.monitoredNodeA", "NRiScript1.Convolve2",
+    "vDesk.0.oscAutoKeyOnOff", "0",
+    "vDesk.0.oscLockTog.cycle", "",
+    "vDesk.0.oscOnOff", "1",
+    "vDesk.0.oscTog.cycle", "",
+    "vDesk.0.roiOnOff", "1",
+    "vDesk.0.updateModeA", "1",
+    "vDesk.0.updateModeB", "1",
+    "vDesk.0.updateTog.0.cycle", "",
+    "vDesk.0.updateTog.1.cycle", "",
+    "vDesk.0.w", "608",
+    "vDesk.0.x", "0",
+    "vDesk.0.xPan", "-112.3096",
+    "vDesk.0.y", "0",
+    "vDesk.0.yPan", "-100.0743",
+    "vDesk.0.zoom", "1",
+    "vDesk.viewers", "1"
+);

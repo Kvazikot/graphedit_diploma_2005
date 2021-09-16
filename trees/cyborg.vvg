@@ -1,0 +1,55 @@
+AddNode(115,197,BIN,1,1,nil,@BIN)
+AddIntParam(BIN_Level,74,0.00,255.00)
+AddIntParam(MAX_Level,198,0.00,255.00)
+
+AddNode(414,255,DILATE,1,1,nil,@DILATE)
+
+AddNode(262,344,Строб. по энергии,2,1,nil,@STROB_PROC)
+AddIntParam(Noise_level,12,0.00,30.00)
+AddIntParam(Steps,10,1.00,10.00)
+AddBoolParam(Show_Gistogram,1)
+AddBoolParam(Conture\Overlay,1)
+
+AddNode(196,22,FILE_IN,0,2,nil,0)
+AddFileParam(FILENAME,cyborg_g.bmp)
+AddIntParam(Frame Buffers,30,0.00,100.00)
+AddIntParam(N Outputs,2,1.00,10.00)
+AddIntParam(Frames Delta,10,0.00,10.00)
+AddFileInManager{
+D:\!src\Delphi\Graph_Editor\cyborg_g.bmp
+}
+
+AddNode(164,322,4SS,2,1,nil,_4SS_PROC)
+AddBoolParam(Switch,1)
+AddBoolParam(DrawGrid,0)
+AddBoolParam(DrawVectors,1)
+
+AddNode(64,106,Watershed,1,1,nil,@Watershed)
+AddBoolParam(Switch,0)
+AddBoolParam(DrawGrid,0)
+AddBoolParam(DrawVectors,1)
+
+AddNode(6,203,Invert#,1,1,nil,@INVERT)
+
+AddNode(208,102,Watershed#,2,1,nil,@Watershed)
+AddBoolParam(Switch,0)
+AddBoolParam(DrawGrid,0)
+AddBoolParam(DrawVectors,1)
+
+AddNode(239,180,BIN#,1,1,nil,@BIN)
+AddIntParam(BIN_Level,74,0.00,255.00)
+AddIntParam(MAX_Level,171,0.00,255.00)
+
+AddNode(328,193,Invert,1,1,nil,@INVERT)
+
+AddConnection(3,2,1,1)
+AddConnection(3,5,0,0)
+AddConnection(5,6,0,0)
+AddConnection(5,0,0,0)
+AddConnection(0,2,0,0)
+AddConnection(3,7,1,0)
+AddConnection(7,8,0,0)
+AddConnection(0,4,0,0)
+AddConnection(8,4,0,1)
+AddConnection(7,9,0,0)
+AddConnection(9,1,0,0)

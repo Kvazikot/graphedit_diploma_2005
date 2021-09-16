@@ -1,0 +1,249 @@
+//;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+//јвтор: ¬ладимир Ѕаранов
+//wwww@sknt.ru ~ vdbar@rambler.ru
+//Ѕыстрые водоразделы
+//GE_FastWS.pas
+//;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+unit GE_FastWS;
+
+interface
+
+uses
+  GR32, Classes, Math, QCKSRT, Contnrs;
+
+  procedure FastWatershed(In_bmp,Out_bmp:PBitmap32);
+
+implementation
+
+type
+
+  TPixelPtr=record
+    ptr:PColor32;
+  end;
+  PPixelPtr = ^TPixelPtr;
+
+procedure FastWatershed(In_bmp,Out_bmp: PBitmap32);
+const
+     INIT = $10000000;
+     MASK = $20000000;
+     WSHED = $00000000;
+     INQUEUE = $30000000;
+     SHR_MASK = 29;
+var
+    Isrt:               array of TPixelPtr; //sorted pixel pointers
+    Isrt_idx:           array[0..256] of Longint; //indexes for sorting
+    Imd:                array of array of TColor32; //image of distance
+    pIsrt:              PPixelPtr;
+    hg,wd,i,idx,k:      integer;
+    S,D,Su,Sd:          PColor32; //temp pointers
+    pfict_pixel:        Pointer; //левый пиксел
+    flag:               boolean;
+    Histogram:          array of Longint;
+    current_label,      current_dist:integer;
+    fifo:               TQueue;
+ //” ј«ј“≈Ћ»
+    pImi,pImo,pImd:     PColor32; //pointers to Imi and Imo
+    qImi,qImo,qImd:     array[0..7] of PColor32;//8 соседей pImi и pImo
+    d_0,d_lst:          Integer; //рассто€ни€ до первого и последнего указател€ (пиксела)
+    pImi_0,pImi_lst,pImd_0,pImd_lst,pImo_0,pImo_lst:PColor32; //указатели на первый и последний пиксел
+    stribe,x_offset:    Integer; //одна строка битмапа в байтах
+begin
+
+/////////////////////////////////
+//      инициализаци€
+/////////////////////////////////
+
+  current_label:=0;
+  pfict_pixel:=ptr($11111111);
+  hg:=In_bmp.Height;
+  wd:=In_bmp.Width;
+
+  //init Im0 to INIT value
+  S:=@Out_bmp.Bits[0];
+  for i:=0 to hg*wd - 1 do
+  begin
+    S^:=INIT; inc(S);
+  end;
+
+  SetLength(Isrt,wd*hg);
+  SetLength(Imd,wd*hg);
+  SetLength(Histogram,256);
+  fifo:=TQueue.Create;
+
+//////////////////////////////////////////////////
+//    1 этап: —ортировка указателей на пикселы
+//////////////////////////////////////////////////
+
+//строим распределение (1-ое сканирование)
+ S:=@In_bmp.Bits[0];
+ for i:=0 to hg*wd - 1 do
+ begin
+   inc(Histogram[S^ and 255]);
+   inc(S);
+ end;
+
+ //инициализируем индексы дл€ сортировки
+ idx:=0;
+ for i:=0 to 255 do
+ begin
+  if(Histogram[i]<>0) then
+  begin
+   Isrt_idx[i]:=idx;
+   idx:=idx+Histogram[i];
+  end;
+ end;
+
+ //сортировка (2-ое сканирование)
+ S:=@In_bmp.Bits[0];
+ for i:=0 to hg*wd - 1 do
+ begin
+   Isrt[Isrt_idx[S^ and 255]].ptr:=S;
+   inc(Isrt_idx[S^ and 255]);
+   inc(S);
+ end;
+ 
+ ///вывод в Out_bmp отсортированных пикселей
+{ pIsrt:=@Isrt[0];
+ D:=@Out_bmp.Bits[0];
+ for i:=0 to hg*wd - 1 do
+ begin
+   if(pIsrt.ptr<>nil) then
+   D^:=pIsrt^.ptr^;
+   inc(D); inc(pIsrt);
+ end;}
+
+//////////////////////////////////////////////
+//      2 этап: ‘лудинг (затопление)
+///////////////////////////////////////////////
+
+//-----------------------------------------------
+  pImi_0:=In_bmp.PixelPtr[0,0];
+  pImo_0:=Out_bmp.PixelPtr[0,0];
+  pImd_0:=@Imd[0];
+  pImi_lst:=In_bmp.PixelPtr[wd,hg];
+  pImo_lst:=Out_bmp.PixelPtr[wd,hg];
+  stribe:=wd*4;
+  pIsrt:=@Isrt[0];
+
+  for i:=0 to wd*hg-1 do
+  begin
+    //вычисл€ем соответсвующий пиксел Imo по указателю
+    //из отсортированного массива
+    d_0:=Integer(pIsrt.ptr)-Integer(pImi_0);
+    pImo:=PColor32(Integer(pImo_0)+d_0);
+    pImo^:=MASK;
+    //проверка выхода за границу
+    d_lst:=Integer(pImi_lst)-Integer(pIsrt.ptr);
+    x_offset:=d_0 mod stribe;
+    if ((x_offset-8)<0) or ((x_offset+8)>stribe) or (d_0<stribe+8) or  (d_lst<stribe+8)
+    then continue;
+    //////////поиск соседей pImo
+    //верхн€€ строка
+    qImo[0]:=PColor32(Integer(pImo)-stribe);
+    qImo[1]:=qImo[0]; dec(qImo[1]);
+    qImo[2]:=qImo[0]; inc(qImo[2]);
+    //средн€€ строка
+    qImo[3]:=pImo; dec(qImo[3]);
+    qImo[4]:=pImo; inc(qImo[4]);
+    //нижн€€ строка
+    qImo[5]:=PColor32(Integer(pImo)+stribe);;
+    qImo[6]:=qImo[5]; inc(qImo[6]);
+    qImo[7]:=qImo[5]; dec(qImo[7]);
+    ///цикл по сосед€м
+    for k:=0 to 7 do
+    begin
+      if ((qImo[k]^ shr SHR_MASK) = 0) or ((qImo[k]^ = WSHED)) then
+      begin
+        pImd:=PColor32(Integer(pImd_0)+d_0);
+        pImd^:=1;
+        fifo.Push(pIsrt.ptr);
+        break;
+      end;
+    end;
+    inc(pIsrt);
+  end;
+//-------------------------------------------------
+  current_dist:=1;
+  fifo.Push(pfict_pixel);
+
+  while 0=0 do
+  begin
+    pImi:=fifo.Pop;
+    if (pImi = pfict_pixel) then
+    begin
+      if (fifo.Count = 0) then break
+      else
+      begin
+        fifo.Push(pfict_pixel);
+        current_dist:=current_dist+1;
+        pImi:=fifo.Pop;
+      end;
+    end;
+//--------------------------------------------------
+    d_0:=Integer(pImi)-Integer(pImi_0);
+    pImo:=PColor32(Integer(pImo_0)+d_0);
+    pImd:=PColor32(Integer(pImd_0)+d_0);
+    //проверка выхода за границу
+    d_lst:=Integer(pImi_lst)-Integer(pImi);
+    x_offset:=d_0 mod stribe;
+    if ((x_offset-8)<0) or ((x_offset+8)>stribe) or (d_0<stribe+8) or  (d_lst<stribe+8)
+    then continue;
+
+     //////////поиск соседей pImo
+    //верхн€€ строка
+    qImo[0]:=PColor32(Integer(pImo)-stribe);
+    qImo[1]:=qImo[0]; dec(qImo[1]);
+    qImo[2]:=qImo[0]; inc(qImo[2]);
+    //средн€€ строка
+    qImo[3]:=pImo; dec(qImo[3]);
+    qImo[4]:=pImo; inc(qImo[4]);
+    //нижн€€ строка
+    qImo[5]:=PColor32(Integer(pImo)+stribe);;
+    qImo[6]:=qImo[5]; inc(qImo[6]);
+    qImo[7]:=qImo[5]; dec(qImo[7]);
+    //////////поиск соседей pImd
+    //верхн€€ строка
+    qImd[0]:=PColor32(Integer(pImd)-stribe);
+    qImd[1]:=qImd[0]; dec(qImd[1]);
+    qImd[2]:=qImd[0]; inc(qImd[2]);
+    //средн€€ строка
+    qImd[3]:=pImo; dec(qImd[3]);
+    qImd[4]:=pImo; inc(qImd[4]);
+    //нижн€€ строка
+    qImd[5]:=PColor32(Integer(pImd)+stribe);;
+    qImd[6]:=qImd[5]; inc(qImd[6]);
+    qImd[7]:=qImd[5]; dec(qImd[7]);
+     ///цикл по сосед€м
+    for k:=0 to 7 do
+    begin
+      if (qImd[k]^<current_dist) and (((qImo[k]^ shr SHR_MASK) = 0) or (qImo[k]^ = WSHED)) then
+      begin
+        if ((qImo[k]^ shr SHR_MASK) = 0) and (qImo[k]^ <> WSHED) then
+        begin
+          if ( (pImo^ = MASK) or (pImo^ = WSHED)) then
+            pImo^:=qImo[k]^
+          else
+          if (pImo^ <> qImo[k]^) then
+            pImo^:=WSHED;
+        end
+        else
+        if (pImo^ = MASK) then pImo^:=WSHED;
+      end
+      else
+      if (qImo[k]^ = MASK) and (qImd[k]^ = 0) then
+      begin
+        qImd[k]^:=current_dist+1;
+        d_0:=Integer(qImo[k])-Integer(pImo_0);
+        pImi:=PColor32(Integer(pImi_0)+d_0);
+        fifo.Push(pImi);
+      end;
+    end;
+ end;
+//------------------------------------------------------
+
+
+end;
+
+
+end.

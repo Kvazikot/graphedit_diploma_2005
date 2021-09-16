@@ -1,0 +1,356 @@
+unit GE_MORPHO;
+
+interface
+
+uses
+  GR32, Classes, Math, Contnrs, QCKSRT;
+
+  procedure MorphoErode(In_bmp,Out_bmp:PBitmap32);
+  procedure MorphoDilate(In_bmp,Out_bmp:PBitmap32);
+  procedure FastMorphoGrad(In_bmp,Out_bmp:PBitmap32);
+  procedure MorphoOpening(In_bmp,Out_bmp:PBitmap32; N:integer);
+  procedure MorphoCloasing(In_bmp,Out_bmp:PBitmap32; N:integer);
+  procedure FastGreyReconstr(Mask_bmp,Marker_bmp:PBitmap32; Max_iterations:integer);
+
+
+implementation
+
+procedure MMX_1(col:TColor32);
+asm
+  //movq mm5,col;
+  Pcmpeqb mm2,mm0 ;
+  MAXSS xmm0, xmm1 ;
+  EMMS;
+end;
+
+////////////////////////////////////////////////////////////////////
+//ѕќЋ”“ќЌќ¬јя –≈ ќЌ—“–” ÷»я (по алгоритм L.Vincent)
+////////////////////////////////////////////////////////////////////
+procedure FastGreyReconstr(Mask_bmp,Marker_bmp:PBitmap32; Max_iterations:integer);
+type
+  PixSeria = record
+    i:integer;
+    val:integer;
+    len:integer;
+  end;
+  PPixSeria=^PixSeria;
+
+const MAX_SERIA_LEN = 30;
+var fifo:TQueue;
+     p:TPoint;
+     p_ptr:^TPoint;
+     point:TPoint;
+     S:PColor32;
+     Gist,RemVal:array of integer;
+    _max,_min,i,j,k,m,l:integer;
+     SeriasList:TList;
+     pSer:^PixSeria;
+     CurSer:PixSeria;
+     Val:integer;
+begin
+ fifo:=TQueue.Create;
+ //fifo.Capacity:=Mask_bmp.Width*Mask_bmp.Height;
+ //Scan D1 in raster order
+  for j:=0 to Mask_bmp.Height-4 do
+  for i:=0 to Mask_bmp.Width-4 do
+  begin
+     _max:=0; //поиск max
+     for m:=0 to 2 do
+     for k:=0 to 2 do
+     begin
+       if (k=1) and (m=1) then continue;
+       if((Marker_bmp.Pixel[k+i,m+j] and 255)>_max)then _max:=Marker_bmp.Pixel[k+i,m+j] and 255;
+     end;
+     _max:=Min(_max,(Mask_bmp.Pixel[1+i,1+j] and 255));
+      Marker_bmp.Pixel[1+i,1+j]:=Color32(_max,_max,_max);
+   end;
+
+  //Scan D1 in anti-raster order
+  for j:=Mask_bmp.Height-4 downto 0 do
+  for i:=Mask_bmp.Width-4 downto 0 do
+  begin
+     _max:=0; //поиск max
+     for m:=0 to 2 do
+     for k:=0 to 2 do
+     begin
+       if (k=1) and (m=1) then continue;
+       if((Marker_bmp.Pixel[k+i,m+j] and 255)>_max)then _max:=(Marker_bmp.Pixel[k+i,m+j] and 255);
+
+       if(((Marker_bmp.Pixel[k+i,m+j] and 255)<(Marker_bmp.Pixel[1+i,1+j] and 255) ) and
+           ((Marker_bmp.Pixel[k+i,m+j] and 255)<(Mask_bmp.Pixel[k+i,m+j] and 255)) )then
+        begin
+          New(p_ptr);
+          p_ptr.X:=1+i;
+          p_ptr.Y:=1+j;
+          fifo.Push(p_ptr);
+          //Marker_bmp.Pixel[p.X,p.Y]:=clred32;
+        end;
+     end;
+     _max:=Min(_max,Mask_bmp.Pixel[1+i,1+j] and 255);
+      Marker_bmp.Pixel[1+i,1+j]:=Color32(_max,_max,_max);
+   end;
+   //Propagation step:
+   i:=0;
+   while fifo.Count<>0 do
+   begin
+     p_ptr:=fifo.Pop;
+     p:=p_ptr^;
+     Dispose(p_ptr);
+     for k:=0 to 2 do
+     for m:=0 to 2 do
+     begin
+       if((Marker_bmp.Pixel[k+p.X,m+p.Y] and 255)<(Marker_bmp.Pixel[p.X,p.Y] and 255)) and
+          ((Mask_bmp.Pixel[k+p.X,m+p.Y] and 255)<>(Marker_bmp.Pixel[k+p.X,m+p.Y] and 255)) then
+       begin
+         _min:=Min((Marker_bmp.Pixel[p.X,p.Y] and 255),(Mask_bmp.Pixel[k+p.X,m+p.Y] and 255));
+         Marker_bmp.Pixel[k+p.X,m+p.Y]:=Color32(_min,_min,_min);
+         New(p_ptr);
+         p_ptr.X:=k+p.X;
+         p_ptr.Y:=m+p.Y;
+         fifo.Push(p_ptr);
+       end;
+      end;
+     inc(i);
+    // if i>Max_iterations then break;
+   end;
+   fifo.Free;
+
+  ///////////////////////////////////
+  //BUG FIX ALGO (based on pixel serias)
+  //////////////////////////////////
+ { SeriasList:=TList.Create;
+  S:=@Marker_bmp^.Bits[0];
+  //init 1 pix
+  Val:=S^ and 255;
+  inc(S);
+  //BUILD SERIASLIST  (scanning image)
+  for j:=0 to Marker_bmp.Height*Marker_bmp.Width-2 do
+  begin
+    if ((S^ and 255)=Val) then inc(k)
+    else
+    begin
+      if (k>MAX_SERIA_LEN) then
+      begin
+       New(pSer);
+       pSer.i:=j-k;
+       pSer.val:=Val;
+       //pSer.ptr^:=clred32;
+       pSer.len:=k;
+       SeriasList.Add(pSer);
+       k:=0;
+      end;
+    end;
+    Val:=S^ and 255;
+    inc(S);
+  end;
+  //строим гистограмму серий
+  SetLength(Gist,255);
+  for i:=0 to SeriasList.Count-1 do
+  begin
+     Val:=PPixSeria(SeriasList.Items[i]).val;
+     k:=PPixSeria(SeriasList.Items[i]).len;
+     Gist[Val]:=Gist[Val]+k;
+  end;
+  //удал€ю первые черные\белые уровни
+  for i:=0 to 10 do Gist[i]:=0;
+  //ищу 3-4 максимума в гистограмме серий
+  SetLength(RemVal,4);
+  for j:=0 to 4 do
+  begin
+   k:=MaxIntValue(Gist);
+   for i:=0 to 255 do
+   if(Gist[i]=k)then
+   begin
+    RemVal[j]:=i;
+    Gist[i]:=0;
+   end;
+  end;
+  //”дал€ем слишком частые пикселы \ исправл€ем баг ^
+    S:=@Marker_bmp^.Bits[0];
+    for j:=0 to Marker_bmp.Height*Marker_bmp.Width-2 do
+    begin
+      if(S^ and 255=RemVal[0]) and (Val=RemVal[0]) then
+       S^:=clBlue32;
+      Val:=S^ and 255;
+      inc(S);
+    end;
+   SeriasList.Free;}
+end;
+
+////////////////////////////////////////////////////////////////////
+//ћќ–‘ќЋќ√»„≈— ќ≈ Ќј–ј»¬јЌ»≈
+////////////////////////////////////////////////////////////////////
+procedure MorphoErode(In_bmp,Out_bmp:PBitmap32);
+var src, dst:PBitmap32;
+    i,j,k,m:integer; SUP,SDOWN,SC,DC: PColor32Array; MIN:TColor32;
+begin
+  src:=In_bmp;
+  dst:=Out_bmp;
+  for j:=1 to src.Height-2 do
+  begin
+      SUP:=@src^.Bits[(j-1)*src.Width];
+      SC:=@src^.Bits[j*src.Width];     //center line of active element
+      SDOWN:=@src^.Bits[(j+1)*src.Width]; //down line -#-
+      DC:=@dst^.Bits[j*dst.Width];
+      for i:=1 to src.Width-2 do
+      begin
+        MIN:=SUP[i-1] and 255;//find min value in window (by red component)
+        for k:=1 to 2 do
+          if((SUP[i-1+k] and 255)<MIN)then MIN:=SUP[i-1+k] and 255;
+        for k:=0 to 2 do
+          if((SC[i-1+k] and 255)<MIN)then MIN:=SC[i-1+k] and 255;
+        for k:=0 to 2 do
+          if((SDOWN[i-1+k] and 255)<MIN)then MIN:=SDOWN[i-1+k] and 255;
+        DC[i]:=Color32(MIN,MIN,MIN);
+      end;
+  end;
+end;
+
+procedure MorphoDilate(In_bmp,Out_bmp:PBitmap32);
+var src, dst:PBitmap32;
+    i,j,k,m:integer; SUP,SDOWN,SC,DC: PColor32Array; MAX:byte;
+begin
+  src:=In_bmp;
+  dst:=Out_bmp;
+    for j:=1 to src.Height-2 do
+    begin
+      SUP:=@src^.Bits[(j-1)*src.Width];
+      SC:=@src^.Bits[j*src.Width];     //center line of active element
+      SDOWN:=@src^.Bits[(j+1)*src.Width]; //down line -#-
+      DC:=@dst^.Bits[j*dst.Width];
+      for i:=1 to src.Width-2 do
+      begin
+        MAX:=0;//find min value in window (by red component)
+        for k:=1 to 2 do
+          if((SUP[i-1+k] and 255)>MAX)then MAX:=SUP[i-1+k] and 255;
+        for k:=0 to 2 do
+          if((SC[i-1+k] and 255)>MAX)then MAX:=SC[i-1+k] and 255;
+        for k:=0 to 2 do
+          if((SDOWN[i-1+k] and 255)>MAX)then MAX:=SDOWN[i-1+k] and 255;
+        DC[i]:=Color32(MAX,MAX,MAX);
+      end;
+   end;
+end;
+
+////////////////////////////////////////////////////////////////////
+//ћќ–‘ќЋќ√»„≈— ќ≈ ќ“ –џ“»≈, N-кол-во эрозий структурным элементом 3x3
+////////////////////////////////////////////////////////////////////
+procedure MorphoOpening(In_bmp,Out_bmp:PBitmap32; N:integer);
+var src, dst:PBitmap32;
+    i,j,k,m:integer;
+    Buffer:TBitmap32; p:PColor32; new_val:integer;
+begin
+  Buffer:=TBitmap32.Create;
+  Buffer.SetSize(In_bmp.Width,In_bmp.Height);
+  In_bmp.DrawTo(Buffer);
+  src:=@Buffer;
+  dst:=Out_bmp;
+{  //вычитаем h дл€ реконструкции
+  p:=@src^.Bits[0];
+  for j:=1 to src.Height*src.Width-1 do
+  begin
+    new_val:=(p^ and 255)-10;
+    if new_val<0 then new_val:=0;
+    p^:=Color32(new_val,new_val,new_val);
+    inc(p);
+  end;}
+  //открытие
+  for m:=0 to N do
+  begin
+     MorphoDilate(src,dst);
+     dst.Drawto(src^);
+     //MorphoDilate(src,dst);
+  end;
+  Buffer.Free;
+end;
+
+
+////////////////////////////////////////////////////////////////////
+//ћќ–‘ќЋќ√»„≈— ќ≈ «ј –џ“»≈, N-кол-во эрозий структурным элементом 3x3
+////////////////////////////////////////////////////////////////////
+procedure MorphoCloasing(In_bmp,Out_bmp:PBitmap32; N:integer);
+var src, dst:PBitmap32;
+    i,j,k,m:integer;
+    Buffer:TBitmap32; p:PColor32; new_val:integer;
+begin
+  Buffer:=TBitmap32.Create;
+  Buffer.SetSize(In_bmp.Width,In_bmp.Height);
+  In_bmp.DrawTo(Buffer);
+  src:=@Buffer;
+  dst:=Out_bmp;
+  for m:=0 to N do
+  begin
+     MorphoErode(src,dst);
+     dst.Drawto(src^);
+  end;
+  Buffer.Free;
+end;
+
+procedure FastMorphoGrad(In_bmp,Out_bmp:PBitmap32);
+
+    procedure minmax(const cl:TColor32; var _min,_max:Word);
+    begin
+         if ((cl and 255)<_min) then
+         begin
+           _min:=(cl and 255)
+         end
+        else
+        if((cl and 255)>_max) then
+           _max:=(cl and 255);
+    end;
+
+var i,j,k,m:integer;
+    min33,min55,min77:Word;
+    max33,max55,max77:Word;
+    MorphoGrad:Word;
+    //Mask:array[0..5,0..5] of boolean;
+    src_ln:array[0..6] of PColor32Array;
+    dst_line,src_line:PColor32Array;
+    tmp:PColor32Array;
+begin
+
+ for j:=0 to In_bmp.Height-8 do
+ begin
+   //беру указатели на 6 строк
+   for k:=6 downto 0 do
+     src_ln[k]:=@In_bmp^.Bits[(j+k)*In_bmp.Width];
+   //лини€ центральных элементов [-][-][-][-]
+   dst_line:=@Out_bmp^.Bits[(3+j)*Out_bmp.Width];
+   //двигаю структ. элемент по строке []--->[]
+   for i:=0 to In_bmp.Width-6 do
+   begin
+   //поиск min\max
+     //в зоне 3x3 (центр)
+     min33:=255;   max33:=0;
+     for k:=2 to 4 do
+     for m:=2 to 4 do minmax(src_ln[k][m+i],min33,max33);
+     //в зоне 5x5
+     min55:=min33;   max55:=max33;
+     for k:=1 to 5 do minmax(src_ln[k][1+i],min55,max55);
+     for k:=1 to 5 do minmax(src_ln[1][k+i],min55,max55);
+     for k:=1 to 5 do minmax(src_ln[k][5+i],min55,max55);
+     for k:=1 to 5 do minmax(src_ln[5][k+i],min55,max55);
+     //в зоне 7x7
+     min77:=min55;   max77:=max55;
+     for k:=0 to 6 do minmax(src_ln[k][0+i],min77,max77);
+     for k:=0 to 6 do minmax(src_ln[0][k+i],min77,max77);
+     for k:=0 to 6 do minmax(src_ln[k][6+i],min77,max77);
+     for k:=0 to 6 do minmax(src_ln[6][k+i],min77,max77);
+     //сумма
+     MorphoGrad:=(max77-min77+max55-min55+max33-min33) div 3;
+     MorphoGrad:=255-MorphoGrad;
+     dst_line[i]:=Color32(MorphoGrad,MorphoGrad,MorphoGrad);
+   end;
+ end;
+
+
+end;
+
+end.
+
+
+
+
+
+
+
